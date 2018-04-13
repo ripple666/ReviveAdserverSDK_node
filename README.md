@@ -5,7 +5,7 @@
 node getAdPic.js
 
 # useage ,publishId is reviveadserver's websitesid  ,zoneId is reviveadserver's zoneid
-localhost/getAdInfo?publishId=6&zoneid=28
+/getAdInfo?publishId=6&zoneid=28
 
 # now you can see the respones like this and when download the locationurl a request add click count will be occur
 {
