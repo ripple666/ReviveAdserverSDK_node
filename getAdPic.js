@@ -79,7 +79,6 @@ const headers = {
 
 
 
-/、
 app.get('/getAdInfoByWebsites', (req, res) => {
     const publishId =  getQueryString('publishId',req._parsedUrl.search)
     const zoneId =  getQueryString('zoneId',req._parsedUrl.search)

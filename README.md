@@ -9,7 +9,7 @@
 node getAdPic.js
 
 # useage ,publishId is reviveadserver's websitesid  ,zoneId is reviveadserver's zoneid
-/getAdInfo?publishId=6&zoneid=28
+/getAdInfo?publishId=6&zoneId=28
 
 # Now you should be presented with a following response，a  request add click will be occur when the locationurl is loaded.
 {
