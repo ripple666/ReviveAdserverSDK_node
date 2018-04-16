@@ -61,7 +61,8 @@ const getZoneIds = ()=> { //获取zoneId
 }
 
 
-//模拟服务器发送请求头
+//模拟浏览器发送请求，所需要的请求头
+//Simulation browser send request
 const headers = {  
     "Content-Type": "application/x-javascript; charset=UTF-8",
     "Access-Control-Allow-Origin" : "*",
@@ -78,7 +79,7 @@ const headers = {
 
 
 
-//getAdInfoByWebsites
+/、
 app.get('/getAdInfoByWebsites', (req, res) => {
     const publishId =  getQueryString('publishId',req._parsedUrl.search)
     const zoneId =  getQueryString('zoneId',req._parsedUrl.search)
