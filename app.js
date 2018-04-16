@@ -5,7 +5,6 @@ const port = 8081
 const app = express()
 //配置mongodb数据库相关内容
 var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://localhost:27017/mongotest";
 
 const http = require('http')
 const homePage = `
@@ -32,44 +31,7 @@ const homePage = `
 
 app.get('/',function(req,res){
 	res.send(homePage)
-	// MongoClient.connect(url, function (err, client) {  
-       
- //        if (err) {  
- //            console.log("数据库连接失败");  
- //            return;  
- //        }  
- //        console.log("数据库连接成功");  
-      
- //        var db = client.db("mongoTest");  
- //        db.collection("user").insertOne({  
- //            "username": "jmin呀",  
- //            "age": 23,  
- //            "sex": "男"  
- //        }, function (err, result) {  
- //            if (err) {  
- //                res.send("插入数据失败");  
- //                return;  
- //            }  
- //            console.log(result)
- //            db.close();  
- //            res.end();  
- //        })  
- //    });  
 })
 .listen(port,()=>{
  	console.log('Server Running At '+port)
 })
-
-
-// app.post('/api/user',function(req,res){
-// 	console.log(req.query)
-
-// 	let userName = req.query.userName
-// 	let passWord = req.query.passWord
-
-// 	res.send('保存数据成功');
-
-// 	let data = [{"userName":'zhoulianyi',"passWord":'zly200571'}]
-
-	
-// })
