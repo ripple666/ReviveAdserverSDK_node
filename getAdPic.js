@@ -26,7 +26,7 @@ let getQueryString = (name,url) => {  //截取search
 
 
 const baseUrl = 'http://123.207.214.20'
-
+const Host = '123.207.214.20'
 
 //定义初始变量，避免返回的js报错
 let location = {
@@ -44,7 +44,7 @@ let window = {
 }
 
 
-
+//处理返回数据的方法
 const  getImgUrl = (str) => {  //截取图片地址
     var reg = /src='.+?'/ig
     return str.match(reg)
@@ -62,14 +62,13 @@ const getZoneIds = ()=> { //获取zoneId
 
 
 //模拟浏览器发送请求，所需要的请求头
-//Simulation browser send request
 const headers = {  
     "Content-Type": "application/x-javascript; charset=UTF-8",
     "Access-Control-Allow-Origin" : "*",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36" ,
     "Upgrade-Insecure-Requests": 1,
     "Pragma" : "no-cache",
-    "Host" : "123.207.214.20",
+    "Host" : Host,
     "Cookie" : "OAID=0da80651e5e6ce91137dfa432573cc3b; OAZBLOCK=5.1521772541_23.1522751283_24.1522154770; OXLCA=26.p6lvne-23; OABLOCK=26.1522757703_28.1522165013; OACAP=26.343_28.17; OAZCAP=5.12_23.343_24.2; OXLIA=26.p6lzd3-23; OAGEO=CN%7C%7C%7C%7C%7C%7C%7C%7C%7C%7C; OACBLOCK=2.1521772541_3.1521773222_6.1522046228_12.1522757703_13.1522165013_15.1523429211_18.1523429211_16.1523429211; OACCAP=2.14_3.30_6.55_12.348_13.17_15.118_18.165_16.137; OASCCAP=16.1_18.1_15.1",
     "Connection" : "keep-alive",
     "Cache-Control": "no-cache",
@@ -77,10 +76,8 @@ const headers = {
     "Accept": "*/*"
 }
 
-let getImpress = (zoneId) =>{
 
-}
-
+//根据网站Id和区域Id拉取广告
 app.get('/getAdInfoByWebsites', (req, res) => {
     const publishId =  getQueryString('publishId',req._parsedUrl.search)
     const zoneId =  getQueryString('zoneId',req._parsedUrl.search)
@@ -91,7 +88,7 @@ app.get('/getAdInfoByWebsites', (req, res) => {
     }
     if(zoneId && publishId){
         new Promise((resolve,reject) =>{
-            let url = 'http://123.207.214.20/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
+            let url =baseUrl + '/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
             let options = {
                 method:'get',
                 url:url,
@@ -152,7 +149,7 @@ app.get('/getAdInfoByWebsites', (req, res) => {
 
 
 
-//getAdInfoByZone
+//根据区域Id拉取广告
 app.get('/getAdInfo',(req, res) => {
     const publishId =  getQueryString('publishId',req._parsedUrl.search)
     const zoneId =  getQueryString('zoneId',req._parsedUrl.search)
@@ -163,7 +160,7 @@ app.get('/getAdInfo',(req, res) => {
     }
     if(zoneId && publishId){
         new Promise((resolve,reject) =>{
-            let url = 'http://123.207.214.20/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
+            let url = baseUrl + '/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
             let options = {
                 method:'get',
                 url:url,
