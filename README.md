@@ -1,15 +1,21 @@
 <<<<<<< HEAD
 # ReviveAdserverSDK_node
- Revive Adserver - ads-sdk-for-web-iphone-android-apps
+------------
+```
+ Revive Adserver - ads-sdk-for-web-iphone-android-apps.
  it's free,free,free.
  The important thing to say three times
+ ```
 
+# usage
+------------
 ``` bash
 # start the serve
 node getAdPic.js
 
-# useage ,publishId is reviveadserver's websitesid  ,zoneId is reviveadserver's zoneid
+# usage ,publishId is reviveadserver's websitesid  ,zoneId is reviveadserver's zoneid
 /getAdInfo?publishId=6&zoneId=28
+/getAdInfoByWebsites?publishId=6&zoneId=28
 
 # Now you should be presented with a following response，a  request add click will be occur when the locationurl is loaded.
 {
@@ -19,4 +25,5 @@ node getAdPic.js
 ```
 
 # I'm chinese , English is poor , forgive me
+------------
  If you have any other questions, you can talk to me,my email:651632406@qq.com
