@@ -77,7 +77,9 @@ const headers = {
     "Accept": "*/*"
 }
 
+let getImpress = (zoneId) =>{
 
+}
 
 app.get('/getAdInfoByWebsites', (req, res) => {
     const publishId =  getQueryString('publishId',req._parsedUrl.search)
@@ -89,28 +91,44 @@ app.get('/getAdInfoByWebsites', (req, res) => {
     }
     if(zoneId && publishId){
         new Promise((resolve,reject) =>{
+            let url = 'http://123.207.214.20/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
             let options = {
                 method:'get',
-                url: baseUrl + '/reviveads/www/delivery/spcjs.php?id='+publishId,
+                url:url,
                 headers: headers
-            };
-            request(options, function (err, res, body) { //spcjs
-                if (err) {
+            }
+            request(options,(err, res, body)=> {
+                if(err){
                     sendData.send('参数错误');
                 }else {
-                    const scriptText = body
-                    eval(scriptText)  //执行返回的结果
-                    let options = { 
-                        method:'get',
-                        url:baseUrl + '/reviveads/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
-                        headers: headers
-                    }
-                    resolve(options)
+                    resolve()
                 }
             })
-        }).then((res) =>{
+        }).then((res)=>{
             return new Promise((resolve,reject) =>{
-                request(res, function (err, res, body) {
+                let options = {
+                    method:'get',
+                    url: baseUrl + '/reviveads/www/delivery/spcjs.php?id='+publishId,
+                    headers: headers
+                };
+                request(options, (err, res, body) =>{ //spcjs
+                    if (err) {
+                        sendData.send('参数错误');
+                    }else {
+                        const scriptText = body
+                        eval(scriptText)  //执行返回的结果
+                        let options = { 
+                            method:'get',
+                            url:baseUrl + '/reviveads/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
+                            headers: headers
+                        }
+                        resolve(options)
+                    }
+                })
+            })
+        }).then((res) =>{
+             return new Promise((resolve,reject) =>{
+                request(res, (err, res, body) => {
                     if(err){
                         sendData.send('参数错误');
                     }else {
@@ -144,14 +162,14 @@ app.get('/getAdInfo',(req, res) => {
         return
     }
     if(zoneId && publishId){
-        let url = 'http://123.207.214.20/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
-        let options = {
-            method:'get',
-            url:url,
-            headers: headers
-        }
         new Promise((resolve,reject) =>{
-            request(options, function (err, res, body) {
+            let url = 'http://123.207.214.20/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
+            let options = {
+                method:'get',
+                url:url,
+                headers: headers
+            }
+            request(options, (err, res, body) =>{
                 if(err){
                     sendData.send('参数错误');
                 }else {
@@ -167,7 +185,7 @@ app.get('/getAdInfo',(req, res) => {
             })
         }).then((res) =>{
             return new Promise((resolve,reject) =>{
-                request(res, function (err, res, body) {
+                request(res, (err, res, body) =>{
                     if(err){
                         sendData.send('参数错误');
                     }else {
