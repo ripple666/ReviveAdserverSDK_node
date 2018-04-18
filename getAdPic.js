@@ -35,7 +35,6 @@ let location = {
 let document = {
     charset :'windows-1252',
     write(){
-        
     }
 }
 let window = {
@@ -45,21 +44,18 @@ let window = {
 
 
 //处理返回数据的方法
-const  getImgUrl = (str) => {  //截取图片地址
-    var reg = /src='.+?'/ig
+const getKeywords = (str,keyword) => {  //截取导航地址
+    var reg = new RegExp(keyword+"='.+?'",'ig')
     return str.match(reg)
 }
-const getNavUrl = (str) => {  //截取导航地址
-    var reg = /href='.+?'/ig
-    return str.match(reg)
-}
+
 const getUrl = (str) => {  //将获取到的图片喝和导航地址进行处理
     return str.substring(str.indexOf('=')+2,str.length-1)
 }
-const getZoneIds = ()=> { //获取zoneId
-    var reg = /var OA_zoneids = escape/ig
+const unescapeHTML = (a)=>{//解码
+    a = "" + a;
+   return a.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/\\/g,'').replace(/\"/g,'');
 }
-
 
 //模拟浏览器发送请求，所需要的请求头
 const headers = {  
@@ -88,59 +84,85 @@ app.get('/getAdInfoByWebsites', (req, res) => {
     }
     if(zoneId && publishId){
         new Promise((resolve,reject) =>{
-            let url =baseUrl + '/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
             let options = {
                 method:'get',
-                url:url,
+                url: baseUrl + '/reviveads/www/delivery/spcjs.php?id='+publishId,
                 headers: headers
-            }
-            request(options,(err, res, body)=> {
-                if(err){
-                    sendData.send('参数错误');
+            };
+            request(options, (err, res, body) =>{ //spcjs
+                if (err) {
+                    throw 'request javaScriptTempleStr err'
                 }else {
-                    resolve()
+                    const scriptText = body
+                    eval(scriptText)  //执行返回的结果
+                    let options = { 
+                        method:'get',
+                        url:baseUrl + '/reviveads/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
+                        headers: headers
+                    }
+                    resolve(options)
                 }
             })
-        }).then((res)=>{
-            return new Promise((resolve,reject) =>{
-                let options = {
-                    method:'get',
-                    url: baseUrl + '/reviveads/www/delivery/spcjs.php?id='+publishId,
-                    headers: headers
-                };
-                request(options, (err, res, body) =>{ //spcjs
-                    if (err) {
-                        sendData.send('参数错误');
-                    }else {
-                        const scriptText = body
-                        eval(scriptText)  //执行返回的结果
-                        let options = { 
-                            method:'get',
-                            url:baseUrl + '/reviveads/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
-                            headers: headers
-                        }
-                        resolve(options)
-                    }
-                })
-            })
         }).then((res) =>{
-             return new Promise((resolve,reject) =>{
+            return new Promise((resolve,reject) =>{
                 request(res, (err, res, body) => {
                     if(err){
-                        sendData.send('参数错误');
+                       throw 'request HtmlTempleStr err'
                     }else {
                         eval(body); //执行字符串语句
-                        let locationUrl = getNavUrl(OA_output[zoneId])[0]
-                        let imgUrl = getImgUrl(OA_output[zoneId])[0]
-                        locationUrl =  getUrl(locationUrl)
-                        imgUrl = getUrl(imgUrl)
+                        const HtmlTempleStr = OA_output[zoneId]
+                        console.log(HtmlTempleStr)
+
+                        let location_url = getUrl(getKeywords(HtmlTempleStr,'href')[0])
+
+                        let imgsrcs =  getKeywords(HtmlTempleStr,'src')
+                        let ad_img_url =  getUrl(imgsrcs[0])
+                        let impress_api = getUrl(imgsrcs[1])
+
+                        let adInfo = ['width','height','title','alt','target']
+                        let adInfoData = {}
+                        adInfo.forEach((v,i)=>{
+                            adInfoData[v] =  getUrl(getKeywords(HtmlTempleStr,v)[0])
+                        })
+
+                        console.log(adInfoData)
+                        console.log(`--------------------------分割线--------------------------------------`)
+
                         var data = {
-                          locationUrl , imgUrl
+                          location_url , ad_img_url,impress_api,...adInfoData
                         }
-                        sendData.send(data)
+                        console.log(data)
+                        console.log(`--------------------------分割线--------------------------------------`)
+                        let options = {
+                            method:'get',
+                            url: unescapeHTML(unescape(impress_api)),
+                            headers: headers
+                        };
+
+                        let resolveData = {
+                            options,data
+                        }
+                        console.log(resolveData)
+                        console.log(`--------------------------分割线--------------------------------------`)
+                        resolve(resolveData)
                     }
                 })
             })
+        }).then((resolveData) =>{
+            console.log(resolveData)
+            console.log(`--------------------------分割线--------------------------------------`)
+            return new Promise((resolve,reject) =>{
+                request(resolveData.options, (err, res, body) => {
+                      console.log(resolveData.options)
+                      console.log(`--------------------------请求结束--------------------------------------`)
+                    if(err){
+                        throw 'request imgpress err'
+                    }else {
+
+                        sendData.send(resolveData.data)
+                    }
+                })
+            }) 
         })
     }else{
          sendData.send('参数错误');
@@ -168,7 +190,7 @@ app.get('/getAdInfo',(req, res) => {
             }
             request(options, (err, res, body) =>{
                 if(err){
-                    sendData.send('参数错误');
+                    throw err
                 }else {
                     var m3_r = Math.floor(Math.random()*99999999999);
                     let url =  baseUrl + '/reviveads/www/delivery/ajs.php?zoneid='+zoneId+'&cb='+m3_r+'&charset=windows-1252&loc=file:///C:/Users/ripple/Desktop/ins.html'
@@ -184,19 +206,25 @@ app.get('/getAdInfo',(req, res) => {
             return new Promise((resolve,reject) =>{
                 request(res, (err, res, body) =>{
                     if(err){
-                        sendData.send('参数错误');
+                       throw err
                     }else {
-                        let unescapeHTML = (a)=>{//解码
-                            a = "" + a;
-                           return a.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/\\/g,'').replace(/\"/g,'');
-                        }
-                        let str = unescapeHTML(body)
-                        var locationUrl = getNavUrl(str)[0]
-                        var imgUrl = getImgUrl(str)[0]
+                        
+                        let HtmlTempleStr = unescapeHTML(body)
+                        var locationUrl = getKeywords(HtmlTempleStr,'href')[0]
+                        var imgUrl = getKeywords(HtmlTempleStr,'src')[0]
                         locationUrl =  getUrl(locationUrl)
                         imgUrl = getUrl(imgUrl)
+
+
+                        let adInfo = ['width','height','title','alt','target']
+                        let adInfoData = {}
+                        adInfo.forEach((v,i)=>{
+                            adInfoData[v] =  getUrl(getKeywords(HtmlTempleStr,v)[0])
+                        })
+
+
                         var data = {
-                          locationUrl , imgUrl
+                          locationUrl , imgUrl,...adInfoData
                         }
                         sendData.send(data)
                     }
@@ -207,6 +235,3 @@ app.get('/getAdInfo',(req, res) => {
         sendData.send('参数错误');
     }
 });
-
-
-
