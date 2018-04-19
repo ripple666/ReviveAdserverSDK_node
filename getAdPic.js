@@ -158,7 +158,8 @@ app.get('/getAdInfoByWebsites', (req, res) => {
                     if(err){
                         throw 'request imgpress err'
                     }else {
-
+                        console.log(resolveData.options)
+                      console.log(`--------------------------请求结束--------------------------------------`)
                         sendData.send(resolveData.data)
                     }
                 })
@@ -192,6 +193,7 @@ app.get('/getAdInfo',(req, res) => {
                 if(err){
                     throw err
                 }else {
+                    console.log(body)
                     var m3_r = Math.floor(Math.random()*99999999999);
                     let url =  baseUrl + '/reviveads/www/delivery/ajs.php?zoneid='+zoneId+'&cb='+m3_r+'&charset=windows-1252&loc=file:///C:/Users/ripple/Desktop/ins.html'
                     let options = { 
