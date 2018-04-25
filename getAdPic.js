@@ -59,7 +59,6 @@ const unescapeHTML = (a)=>{//解码
 
 //模拟浏览器发送请求，所需要的请求头
 const headers = {  
-    "Content-Type": "application/x-javascript; charset=UTF-8",
     "Access-Control-Allow-Origin" : "*",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36" ,
     "Upgrade-Insecure-Requests": 1,
@@ -73,167 +72,225 @@ const headers = {
 }
 
 
+const  responseData = (data) =>{
+    return {
+        data,
+        msg:'success',
+        ret:0
+    }
+}
+
+const  responseErrData = (msg) =>{
+    return {
+        msg,
+        ret:1
+    }
+}
+
 //根据网站Id和区域Id拉取广告
-app.get('/getAdInfoByWebsites', (req, res) => {
-    const publishId =  getQueryString('publishId',req._parsedUrl.search)
+app.get('/getAds', (req, res) => {
+    const websitesId =  getQueryString('websitesId',req._parsedUrl.search)
     const zoneId =  getQueryString('zoneId',req._parsedUrl.search)
+
     const sendData = res
     if(!req._parsedUrl.search){
-        sendData.send('缺少参数');
+        sendData.send(responseErrData('缺少参数'));
         return
     }
-    if(zoneId && publishId){
+    if(websitesId){
         new Promise((resolve,reject) =>{
             let options = {
                 method:'get',
-                url: baseUrl + '/reviveads/www/delivery/spcjs.php?id='+publishId,
+                url: baseUrl + '/reviveads/www/delivery/spcjs.php?id='+websitesId,
                 headers: headers
             };
             request(options, (err, res, body) =>{ //spcjs
                 if (err) {
-                    throw 'request javaScriptTempleStr err'
+                    sendData.send(responseErrData('request javaScriptTempleStr err'))
                 }else {
-                    const scriptText = body
-                    eval(scriptText)  //执行返回的结果
-                    let options = { 
-                        method:'get',
-                        url:baseUrl + '/reviveads/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
-                        headers: headers
+                    try {
+                        const scriptText = body
+                        eval(scriptText)  //执行返回的结果
+                        if(!OA_zoneids || !OA_zoneids[0]){  //有pubulish没有广告位
+                             sendData.send(responseErrData('no ads'))
+                        }
+                        let options = { 
+                            method:'get',
+                            url:baseUrl + '/reviveads/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
+                            headers: headers
+                        }
+                        resolve(options)
                     }
-                    resolve(options)
+                    catch(err){
+                        sendData.send(responseErrData('request err'))
+                    }
+                    
                 }
             })
         }).then((res) =>{
             return new Promise((resolve,reject) =>{
                 request(res, (err, res, body) => {
                     if(err){
-                       throw 'request HtmlTempleStr err'
+                       sendData.send(responseErrData('request HtmlTempleStr err'))
                     }else {
-                        eval(body); //执行字符串语句
-                        const HtmlTempleStr = OA_output[zoneId]
-                        console.log(HtmlTempleStr)
+                        eval(body); //执行字符串语句,得到的是一个所有广告的数组
+                        // console.log(OA_output)
+                        // console.log(`--------------------------分割线--------------------------------------`)
+                        if(zoneId){
+                            try {
+                                const HtmlTempleStr = OA_output[zoneId]
+                                // console.log(HtmlTempleStr)
+                                // console.log(`--------------------------分割线--------------------------------------`)
+                                let location_url = getUrl(getKeywords(HtmlTempleStr,'href')[0])
 
-                        let location_url = getUrl(getKeywords(HtmlTempleStr,'href')[0])
+                                let imgsrcs =  getKeywords(HtmlTempleStr,'src')
+                                let ad_img_url =  getUrl(imgsrcs[0])
+                                let impress_api = getUrl(imgsrcs[1])
 
-                        let imgsrcs =  getKeywords(HtmlTempleStr,'src')
-                        let ad_img_url =  getUrl(imgsrcs[0])
-                        let impress_api = getUrl(imgsrcs[1])
+                                let adInfo = ['width','height','title','alt','target']
+                                let adInfoData = {}
+                                adInfo.forEach((v,i)=>{
+                                    adInfoData[v] =  getUrl(getKeywords(HtmlTempleStr,v)[0])
+                                })
 
-                        let adInfo = ['width','height','title','alt','target']
-                        let adInfoData = {}
-                        adInfo.forEach((v,i)=>{
-                            adInfoData[v] =  getUrl(getKeywords(HtmlTempleStr,v)[0])
-                        })
+                                // console.log(adInfoData)
+                                // console.log(`--------------------------分割线--------------------------------------`)
 
-                        console.log(adInfoData)
-                        console.log(`--------------------------分割线--------------------------------------`)
-
-                        var data = {
-                          location_url , ad_img_url,impress_api,...adInfoData
+                                var data = {
+                                  location_url , ad_img_url,impress_api,...adInfoData
+                                }
+                                // console.log(data)
+                                // console.log(`--------------------------分割线--------------------------------------`)
+                                let options = {
+                                    method:'get',
+                                    url: unescapeHTML(unescape(impress_api)),
+                                    headers: headers
+                                };
+                                let resolveData = {
+                                    options,data
+                                }
+                                // console.log(resolveData)
+                                // console.log(`--------------------------分割线--------------------------------------`)
+                                resolve(resolveData)    
+                            }
+                            catch (err){
+                                sendData.send(responseErrData('request HtmlTempleStr err'))
+                            }
+                        }else{
+                            try{
+                                OA_output = OA_output.filter((v,i)=>{
+                                    return v
+                                })
+                                // console.log(OA_output)
+                                // console.log(`--------------------------分割线 OA_output--------------------------------------`)
+                                let adsList = [];
+                                let adInfo = ['width','height','title','alt','target'] 
+                                OA_output.forEach((v,i)=>{
+                                    adsList[i] = {};
+                                    adsList[i].location_url = getUrl(getKeywords(v,'href')[0])
+                                    adsList[i].ad_img_url =  getUrl( getKeywords(v,'src')[0])
+                                    adsList[i].impress_api = getUrl( getKeywords(v,'src')[1])
+                                    adInfo.forEach((adInfokey,adInfoIndex)=>{
+                                        adsList[i][adInfokey] =  getUrl(getKeywords(v,adInfokey)[0])
+                                    })
+                                })
+                                
+                                sendData.send(responseData(adsList))
+                            }
+                            catch (err){
+                                sendData.send(responseErrData('request HtmlTempleStr err'))
+                            }
                         }
-                        console.log(data)
-                        console.log(`--------------------------分割线--------------------------------------`)
-                        let options = {
-                            method:'get',
-                            url: unescapeHTML(unescape(impress_api)),
-                            headers: headers
-                        };
-
-                        let resolveData = {
-                            options,data
-                        }
-                        console.log(resolveData)
-                        console.log(`--------------------------分割线--------------------------------------`)
-                        resolve(resolveData)
+                       
                     }
                 })
             })
         }).then((resolveData) =>{
-            console.log(resolveData)
-            console.log(`--------------------------分割线--------------------------------------`)
+            // console.log(resolveData)
+            // console.log(`--------------------------分割线--------------------------------------`)
             return new Promise((resolve,reject) =>{
                 request(resolveData.options, (err, res, body) => {
-                      console.log(resolveData.options)
-                      console.log(`--------------------------请求结束--------------------------------------`)
+                      // console.log(resolveData.options)
+                      // console.log(`--------------------------请求结束--------------------------------------`)
                     if(err){
                         throw 'request imgpress err'
                     }else {
-                        console.log(resolveData.options)
-                      console.log(`--------------------------请求结束--------------------------------------`)
-                        sendData.send(resolveData.data)
+                        // console.log(resolveData.options)
+                        // console.log(`--------------------------请求结束--------------------------------------`)
+                        sendData.send(responseData(resolveData.data))
                     }
                 })
             }) 
         })
     }else{
-         sendData.send('参数错误');
+         sendData.send('no websitesId');
     }
 });
 
 
 
 //根据区域Id拉取广告
-app.get('/getAdInfo',(req, res) => {
-    const publishId =  getQueryString('publishId',req._parsedUrl.search)
-    const zoneId =  getQueryString('zoneId',req._parsedUrl.search)
-    const sendData = res
-    if(!req._parsedUrl.search){
-        sendData.send('缺少参数');
-        return
-    }
-    if(zoneId && publishId){
-        new Promise((resolve,reject) =>{
-            let url = baseUrl + '/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
-            let options = {
-                method:'get',
-                url:url,
-                headers: headers
-            }
-            request(options, (err, res, body) =>{
-                if(err){
-                    throw err
-                }else {
-                    console.log(body)
-                    var m3_r = Math.floor(Math.random()*99999999999);
-                    let url =  baseUrl + '/reviveads/www/delivery/ajs.php?zoneid='+zoneId+'&cb='+m3_r+'&charset=windows-1252&loc=file:///C:/Users/ripple/Desktop/ins.html'
-                    let options = { 
-                        method:'get',
-                        url:url,
-                        headers: headers
-                    }
-                    resolve(options)
-                }
-            })
-        }).then((res) =>{
-            return new Promise((resolve,reject) =>{
-                request(res, (err, res, body) =>{
-                    if(err){
-                       throw err
-                    }else {
+// app.get('/getAdInfo',(req, res) => {
+//     const websitesId =  getQueryString('websitesId',req._parsedUrl.search)
+//     const zoneId =  getQueryString('zoneId',req._parsedUrl.search)
+//     const sendData = res
+//     if(!req._parsedUrl.search){
+//         sendData.send('缺少参数');
+//         return
+//     }
+//     if(zoneId && websitesId){
+//         new Promise((resolve,reject) =>{
+//             let url = baseUrl + '/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
+//             let options = {
+//                 method:'get',
+//                 url:url,
+//                 headers: headers
+//             }
+//             request(options, (err, res, body) =>{
+//                 if(err){
+//                     throw err
+//                 }else {
+//                     console.log(body)
+//                     var m3_r = Math.floor(Math.random()*99999999999);
+//                     let url =  baseUrl + '/reviveads/www/delivery/ajs.php?zoneid='+zoneId+'&cb='+m3_r+'&charset=windows-1252&loc=file:///C:/Users/ripple/Desktop/ins.html'
+//                     let options = { 
+//                         method:'get',
+//                         url:url,
+//                         headers: headers
+//                     }
+//                     resolve(options)
+//                 }
+//             })
+//         }).then((res) =>{
+//             return new Promise((resolve,reject) =>{
+//                 request(res, (err, res, body) =>{
+//                     if(err){
+//                        throw err
+//                     }else {
                         
-                        let HtmlTempleStr = unescapeHTML(body)
-                        var locationUrl = getKeywords(HtmlTempleStr,'href')[0]
-                        var imgUrl = getKeywords(HtmlTempleStr,'src')[0]
-                        locationUrl =  getUrl(locationUrl)
-                        imgUrl = getUrl(imgUrl)
+//                         let HtmlTempleStr = unescapeHTML(body)
+//                         var locationUrl = getKeywords(HtmlTempleStr,'href')[0]
+//                         var imgUrl = getKeywords(HtmlTempleStr,'src')[0]
+//                         locationUrl =  getUrl(locationUrl)
+//                         imgUrl = getUrl(imgUrl)
 
 
-                        let adInfo = ['width','height','title','alt','target']
-                        let adInfoData = {}
-                        adInfo.forEach((v,i)=>{
-                            adInfoData[v] =  getUrl(getKeywords(HtmlTempleStr,v)[0])
-                        })
+//                         let adInfo = ['width','height','title','alt','target']
+//                         let adInfoData = {}
+//                         adInfo.forEach((v,i)=>{
+//                             adInfoData[v] =  getUrl(getKeywords(HtmlTempleStr,v)[0])
+//                         })
 
 
-                        var data = {
-                          locationUrl , imgUrl,...adInfoData
-                        }
-                        sendData.send(data)
-                    }
-                })
-            })
-        })
-    }else{
-        sendData.send('参数错误');
-    }
-});
+//                         var data = {
+//                           locationUrl , imgUrl,...adInfoData
+//                         }
+//                         sendData.send(data)
+//                     }
+//                 })
+//             })
+//         })
+//     }else{
+//         sendData.send('参数错误');
+//     }
+// });
