@@ -25,8 +25,8 @@ let getQueryString = (name,url) => {  //截取search
 }
 
 
-const baseUrl = 'http://123.207.214.20'
-const Host = '123.207.214.20'
+const baseUrl = 'http://dashboard.adtoken.one/dolphinads'
+const Host = 'dashboard.adtoken.one'
 
 //定义初始变量，避免返回的js报错
 let location = {
@@ -87,10 +87,19 @@ const  responseErrData = (msg) =>{
     }
 }
 
+const dolphinAds = {
+    3001:79
+}
+
+
+
+
 //根据网站Id和区域Id拉取广告
 app.get('/getAds', (req, res) => {
-    const websitesId =  getQueryString('websitesId',req._parsedUrl.search)
-    const zoneId =  getQueryString('zoneId',req._parsedUrl.search)
+    const search = req._parsedUrl.search
+    const websitesId =  getQueryString('websitesId',search)
+    const zoneId =  getQueryString('zoneId',search)
+    const dolphinAdZoneId = getQueryString('dolphinAdZoneId',search)
 
     const sendData = res
     if(!req._parsedUrl.search){
@@ -101,7 +110,7 @@ app.get('/getAds', (req, res) => {
         new Promise((resolve,reject) =>{
             let options = {
                 method:'get',
-                url: baseUrl + '/reviveads/www/delivery/spcjs.php?id='+websitesId,
+                url: baseUrl + '/www/delivery/spcjs.php?id='+websitesId,
                 headers: headers
             };
             request(options, (err, res, body) =>{ //spcjs
@@ -116,7 +125,7 @@ app.get('/getAds', (req, res) => {
                         }
                         let options = { 
                             method:'get',
-                            url:baseUrl + '/reviveads/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
+                            url:baseUrl + '/www/delivery/spc.php?zones=' + OA_zoneids + '&r=' + OA_r+'&loc=http://123.206.205.11&source=&charset=UTF-8',
                             headers: headers
                         }
                         resolve(options)
@@ -128,6 +137,7 @@ app.get('/getAds', (req, res) => {
                 }
             })
         }).then((res) =>{
+            console.log(res)
             return new Promise((resolve,reject) =>{
                 request(res, (err, res, body) => {
                     if(err){
@@ -136,16 +146,21 @@ app.get('/getAds', (req, res) => {
                         eval(body); //执行字符串语句,得到的是一个所有广告的数组
                         // console.log(OA_output)
                         // console.log(`--------------------------分割线--------------------------------------`)
-                        if(zoneId){
+                        if(zoneId || dolphinAdZoneId){ //查找指定zone
+                            let a = zoneId;
+                            if(dolphinAdZoneId){
+                                a = dolphinAds[dolphinAdZoneId]
+                            }
+                            console.log(a)
                             try {
-                                const HtmlTempleStr = OA_output[zoneId]
+                                const HtmlTempleStr = OA_output[a]
                                 // console.log(HtmlTempleStr)
                                 // console.log(`--------------------------分割线--------------------------------------`)
                                 let location_url = getUrl(getKeywords(HtmlTempleStr,'href')[0])
 
                                 let imgsrcs =  getKeywords(HtmlTempleStr,'src')
                                 let ad_img_url =  getUrl(imgsrcs[0])
-                                let impress_api = getUrl(imgsrcs[1])
+                                let impress_api = unescape(unescapeHTML(getUrl(imgsrcs[1])))
 
                                 let adInfo = ['width','height','title','alt','target']
                                 let adInfoData = {}
@@ -157,13 +172,13 @@ app.get('/getAds', (req, res) => {
                                 // console.log(`--------------------------分割线--------------------------------------`)
 
                                 var data = {
-                                  location_url , ad_img_url,impress_api,...adInfoData
+                                  location_url , ad_img_url,...adInfoData
                                 }
                                 // console.log(data)
                                 // console.log(`--------------------------分割线--------------------------------------`)
                                 let options = {
                                     method:'get',
-                                    url: unescapeHTML(unescape(impress_api)),
+                                    url: impress_api,
                                     headers: headers
                                 };
                                 let resolveData = {
@@ -174,12 +189,13 @@ app.get('/getAds', (req, res) => {
                                 resolve(resolveData)    
                             }
                             catch (err){
+                                console.log(err)
                                 sendData.send(responseErrData('request HtmlTempleStr err'))
                             }
-                        }else{
+                        }else{//查找websites下所有 zone
                             try{
                                 OA_output = OA_output.filter((v,i)=>{
-                                    return v
+                                    return v && v.indexOf('<a')>-1
                                 })
                                 // console.log(OA_output)
                                 // console.log(`--------------------------分割线 OA_output--------------------------------------`)
@@ -187,17 +203,21 @@ app.get('/getAds', (req, res) => {
                                 let adInfo = ['width','height','title','alt','target'] 
                                 OA_output.forEach((v,i)=>{
                                     adsList[i] = {};
-                                    adsList[i].location_url = getUrl(getKeywords(v,'href')[0])
+                                    adsList[i].location_url = unescape(unescapeHTML(getUrl(getKeywords(v,'href')[0])))
                                     adsList[i].ad_img_url =  getUrl( getKeywords(v,'src')[0])
-                                    adsList[i].impress_api = getUrl( getKeywords(v,'src')[1])
+                                    let impress_api = unescape(unescapeHTML(getUrl( getKeywords(v,'src')[1])))
+                                    adsList[i].impress_api = impress_api
                                     adInfo.forEach((adInfokey,adInfoIndex)=>{
                                         adsList[i][adInfokey] =  getUrl(getKeywords(v,adInfokey)[0])
                                     })
+                                
+                                    
                                 })
                                 
                                 sendData.send(responseData(adsList))
                             }
                             catch (err){
+                                console.log(err)
                                 sendData.send(responseErrData('request HtmlTempleStr err'))
                             }
                         }
@@ -240,7 +260,7 @@ app.get('/getAds', (req, res) => {
 //     }
 //     if(zoneId && websitesId){
 //         new Promise((resolve,reject) =>{
-//             let url = baseUrl + '/reviveads/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
+//             let url = baseUrl + '/www/delivery/avw.php?zoneid='+zoneId+'&cb=INSERT_RANDOM_NUMBER_HERE&n=a2522711'
 //             let options = {
 //                 method:'get',
 //                 url:url,
@@ -252,7 +272,7 @@ app.get('/getAds', (req, res) => {
 //                 }else {
 //                     console.log(body)
 //                     var m3_r = Math.floor(Math.random()*99999999999);
-//                     let url =  baseUrl + '/reviveads/www/delivery/ajs.php?zoneid='+zoneId+'&cb='+m3_r+'&charset=windows-1252&loc=file:///C:/Users/ripple/Desktop/ins.html'
+//                     let url =  baseUrl + '/www/delivery/ajs.php?zoneid='+zoneId+'&cb='+m3_r+'&charset=windows-1252&loc=file:///C:/Users/ripple/Desktop/ins.html'
 //                     let options = { 
 //                         method:'get',
 //                         url:url,
